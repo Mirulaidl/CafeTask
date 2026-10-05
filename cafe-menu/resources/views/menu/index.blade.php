@@ -6,8 +6,13 @@
       <h1 class="mt-1 text-4xl font-semibold sm:text-5xl">Hidangan kami</h1>
     </div>
     @if(auth()->user()?->role === 'admin')
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <a href="{{ route('admin.search') }}" class="btn-primary">+ Tambah dari API</a>
+        <form action="{{ route('admin.import') }}" method="POST" enctype="multipart/form-data" class="m-0 flex items-center">
+          @csrf
+          <input type="file" name="csv_file" id="csv_file" accept=".csv" class="hidden" onchange="this.form.submit()">
+          <label for="csv_file" class="btn-forest cursor-pointer m-0">Import CSV</label>
+        </form>
         <a href="{{ route('admin.export') }}" class="btn-forest">Export CSV</a>
       </div>
     @endif
@@ -15,6 +20,16 @@
 
   @if(session('ok'))
     <div class="frost-card mb-6 border-[#3f5a43]/20 px-5 py-3 text-sm font-medium text-[#3f5a43]">{{ session('ok') }}</div>
+  @endif
+
+  @if($errors->any())
+    <div class="frost-card mb-6 border-red-500/20 px-5 py-3 text-sm font-medium text-red-600">
+      <ul class="list-disc pl-5">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
   @endif
 
   <form class="frost-card mb-6 flex flex-col gap-3 p-4 sm:flex-row">
@@ -32,38 +47,35 @@
     @endforeach
   </div>
 
-  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    @forelse($items as $i)
-      <article class="frost-card card-lift flex flex-col overflow-hidden">
-        <a href="{{ route('menu.show', $i) }}" class="relative block aspect-[4/3] overflow-hidden">
-          <img src="{{ $i->image }}" alt="{{ $i->name }}" loading="lazy" class="h-full w-full object-cover transition duration-500 hover:scale-105 {{ $i->status === 'habis' ? 'grayscale-[60%]' : '' }}">
-          <div class="absolute left-3 top-3"><x-status-badge :status="$i->status" /></div>
-        </a>
-        <div class="flex flex-1 flex-col p-5">
-          <p class="text-xs font-semibold uppercase tracking-wider text-[#3b2a20]/50">{{ $i->category }}</p>
-          <a href="{{ route('menu.show', $i) }}"><h3 class="mt-1 text-xl font-semibold hover:text-[#c2603a]">{{ $i->name }}</h3></a>
-          <div class="mt-auto flex items-center justify-between pt-4">
-            <span class="font-display text-2xl font-semibold text-[#c2603a]">RM {{ number_format($i->price, 2) }}</span>
-            @if(auth()->user()?->role === 'admin')
-              <div class="flex gap-1">
-                <a href="{{ route('admin.edit', $i) }}" class="rounded-full px-3 py-1.5 text-sm font-medium text-[#3f5a43] hover:bg-[#3f5a43]/10">Edit</a>
-                <form method="POST" action="{{ route('admin.destroy', $i) }}" onsubmit="return confirm('Padam menu ini?')">
-                  @csrf @method('DELETE')
-                  <button class="rounded-full px-3 py-1.5 text-sm font-medium text-[#a84f2e] hover:bg-[#c2603a]/10">Padam</button>
-                </form>
-              </div>
-            @endif
-          </div>
+  @if($isGrouped)
+    @forelse($items as $category => $categoryItems)
+      <div class="mb-10">
+        <h2 class="mb-6 text-3xl font-display font-semibold text-[#3b2a20] border-b-2 border-[#c2603a]/20 pb-2">{{ $category ?: 'Lain-lain' }}</h2>
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          @foreach($categoryItems as $i)
+            @include('menu.partials.card', ['i' => $i])
+          @endforeach
         </div>
-      </article>
+      </div>
     @empty
-      <div class="frost-card col-span-full p-12 text-center">
+      <div class="frost-card p-12 text-center">
         <p class="text-4xl">🍽️</p>
         <p class="mt-3 font-display text-xl">Tiada menu dijumpai.</p>
       </div>
     @endforelse
-  </div>
+  @else
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      @forelse($items as $i)
+        @include('menu.partials.card', ['i' => $i])
+      @empty
+        <div class="frost-card col-span-full p-12 text-center">
+          <p class="text-4xl">🍽️</p>
+          <p class="mt-3 font-display text-xl">Tiada menu dijumpai.</p>
+        </div>
+      @endforelse
+    </div>
 
-  <div class="mt-10">{{ $items->withQueryString()->links() }}</div>
+    <div class="mt-10">{{ $items->links() }}</div>
+  @endif
 </div>
 </x-app-layout>

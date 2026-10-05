@@ -11,11 +11,25 @@ class AdminMenuController extends Controller
 {
     public function search(Request $r, MealDbService $api)
     {
-        $meals = $r->filled('q') ? $api->search($r->q) : [];
+        $categories = $api->categories();
+        $meals = [];
+        
+        if ($r->filled('q')) {
+            $meals = $api->search($r->q);
+        } elseif ($r->filled('c')) {
+            $meals = $api->byCategory($r->c);
+            if ($meals) {
+                foreach ($meals as &$meal) {
+                    $meal['strCategory'] = $r->c;
+                }
+            }
+        }
+
         $existing = $meals
             ? MenuItem::whereIn('meal_id', collect($meals)->pluck('idMeal')->all())->pluck('meal_id')->all()
             : [];
-        return view('admin.search', compact('meals', 'existing'));
+            
+        return view('admin.search', compact('meals', 'existing', 'categories'));
     }
 
     public function store(Request $r, MealDbService $api)
@@ -66,6 +80,68 @@ class AdminMenuController extends Controller
     {
         $menu->delete();
         return back()->with('ok', 'Dipadam.');
+    }
+
+    public function import(Request $r, MealDbService $api)
+    {
+        $r->validate([
+            'csv_file' => 'required|file|mimes:csv,txt'
+        ]);
+
+        $file = $r->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+        
+        $header = fgetcsv($handle);
+        if (!$header || !in_array('Meal ID', $header)) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Format CSV tidak sah. Pastikan diexport dari sistem.']);
+        }
+        
+        $colMealId = array_search('Meal ID', $header);
+        $colPrice = array_search('Harga', $header);
+        $colStatus = array_search('Status', $header);
+
+        if ($colMealId === false || $colPrice === false || $colStatus === false) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Kolum yang diperlukan (Meal ID, Harga, Status) tidak dijumpai.']);
+        }
+
+        $count = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!isset($row[$colMealId])) continue;
+            
+            $mealId = $row[$colMealId];
+            $price = floatval($row[$colPrice] ?? 0);
+            $status = trim(strtolower($row[$colStatus] ?? ''));
+            if (!in_array($status, ['ada', 'habis'])) {
+                $status = 'ada';
+            }
+            
+            $existing = MenuItem::where('meal_id', $mealId)->first();
+            if ($existing) {
+                $existing->update(['price' => $price, 'status' => $status]);
+                $count++;
+            } else {
+                $meal = $api->find($mealId);
+                if ($meal) {
+                    MenuItem::create([
+                        'meal_id' => $meal['idMeal'],
+                        'name' => $meal['strMeal'],
+                        'image' => $meal['strMealThumb'],
+                        'category' => $meal['strCategory'],
+                        'area' => $meal['strArea'],
+                        'instructions' => Str::limit($meal['strInstructions'] ?? '', 3900, ''),
+                        'ingredients' => MealDbService::ingredients($meal),
+                        'price' => $price,
+                        'status' => $status,
+                    ]);
+                    $count++;
+                }
+            }
+        }
+        fclose($handle);
+
+        return back()->with('ok', "$count menu berjaya diimport/dikemaskini.");
     }
 
     public function export()

@@ -1,15 +1,31 @@
 <x-app-layout>
 <div class="max-w-4xl mx-auto p-6">
   <a href="{{ route('menu.index') }}" class="underline">&larr; Kembali ke menu</a>
-  <form class="flex gap-2 my-4">
-    <input name="q" value="{{ request('q') }}" placeholder="Cari resipi (cth: chicken)" class="border rounded px-2">
-    <button class="bg-gray-800 text-white px-3 rounded">Cari API</button>
-  </form>
+  <div class="my-4">
+    <form class="flex gap-2">
+      <input name="q" value="{{ request('q') }}" placeholder="Cari resipi (cth: chicken)" class="border rounded px-2 flex-1">
+      <button class="bg-gray-800 text-white px-3 rounded">Cari API</button>
+    </form>
+  </div>
+
+  <div class="mb-6">
+    <h3 class="font-semibold text-gray-700 mb-2">Pilih Kategori:</h3>
+    <div class="flex flex-wrap gap-2">
+      @foreach($categories as $cat)
+        <a href="{{ route('admin.search', ['c' => $cat]) }}" class="px-3 py-1 border rounded text-sm {{ request('c') === $cat ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-50' }}">
+          {{ $cat }}
+        </a>
+      @endforeach
+    </div>
+  </div>
+
   @error('meal_id')<div class="text-red-600 mb-2">{{ $message }}</div>@enderror
   @error('price')<div class="text-red-600 mb-2">{{ $message }}</div>@enderror
 
-  @if(request()->filled('q') && count($meals) === 0)
+  @if((request()->filled('q') || request()->filled('c')) && count($meals) === 0)
     <p>Tiada hasil.</p>
+  @elseif(!request()->filled('q') && !request()->filled('c'))
+    <p class="text-gray-500">Sila buat carian atau pilih kategori di atas untuk melihat senarai menu yang boleh ditambah dari API.</p>
   @endif
 
   @foreach($meals as $m)

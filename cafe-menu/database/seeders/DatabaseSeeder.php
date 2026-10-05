@@ -18,5 +18,14 @@ class DatabaseSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
+
+        User::firstOrCreate(
+            ['email' => 'customer@cafe.test'],
+            [
+                'name' => 'Customer',
+                'password' => Hash::make('password'),
+                'role' => 'user',
+            ]
+        );
     }
 }

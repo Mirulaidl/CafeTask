@@ -10,14 +10,19 @@ class MenuController extends Controller
 {
     public function index(Request $r, MealDbService $api)
     {
-        $items = MenuItem::query()
+        $query = MenuItem::query()
             ->when($r->q, fn ($q, $v) => $q->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($v) . '%']))
             ->when($r->category, fn ($q, $v) => $q->where('category', $v))
-            ->orderBy('name')
-            ->paginate(10)
-            ->withQueryString();
+            ->orderBy('name');
 
-        return view('menu.index', ['items' => $items, 'categories' => $api->categories()]);
+        $items = $query->paginate(10)->withQueryString();
+        $isGrouped = false;
+
+        return view('menu.index', [
+            'items' => $items, 
+            'categories' => $api->categories(),
+            'isGrouped' => $isGrouped
+        ]);
     }
 
     public function show(MenuItem $menu)

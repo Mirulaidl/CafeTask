@@ -14,6 +14,11 @@ class MealDbService
         return Http::get("{$this->base}/search.php", ['s' => $name])->json('meals') ?? [];
     }
 
+    public function byCategory(string $category): array
+    {
+        return Http::get("{$this->base}/filter.php", ['c' => $category])->json('meals') ?? [];
+    }
+
     public function find(string $id): ?array
     {
         return Http::get("{$this->base}/lookup.php", ['i' => $id])->json('meals.0');

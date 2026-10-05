@@ -14,6 +14,17 @@
       <h1 class="mt-4 text-4xl font-semibold">{{ $item->name }}</h1>
       <p class="mt-2 font-display text-3xl font-semibold text-[#c2603a]">RM {{ number_format($item->price, 2) }}</p>
 
+      @auth
+        @if(auth()->user()?->role !== 'admin' && $item->status === 'ada')
+          <form method="POST" action="{{ route('cart.add') }}" class="mt-6 flex items-center gap-3">
+            @csrf
+            <input type="hidden" name="menu_id" value="{{ $item->id }}">
+            <input type="number" name="quantity" value="1" min="1" class="w-20 rounded border-gray-300 px-3 py-2 text-lg">
+            <button class="btn-primary flex-1 !py-3 text-lg">Tambah ke Troli</button>
+          </form>
+        @endif
+      @endauth
+
       <h2 class="mt-8 text-xl font-semibold">Bahan &amp; Sukatan</h2>
       <ul class="mt-4 divide-y divide-[#3b2a20]/10 rounded-2xl bg-white/50">
         @forelse($item->ingredients ?? [] as $g)
